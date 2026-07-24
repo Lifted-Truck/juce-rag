@@ -1,0 +1,264 @@
+# JUCE RAG — retrieval golden set
+# Version: v0 (initial pass, DRAFT)
+#
+# STATUS: No entry here gates anything until the maintainer confirms it.
+# Each entry carries `confirmed: false` until reviewed.
+#
+# SCOPE ASSUMPTION — SUPERSEDED at spin-up by DECISIONS.md D-004 (proposed:
+#   target 9.0.0, drift baseline 8.x-and-earlier; JUCE 9.0.0 shipped 2026-07-21).
+#   Header below preserved as-imported; update at P1 confirmation.
+# SCOPE ASSUMPTION (as imported):
+#   target JUCE version: 8.x
+#   drift baseline:      7.x  (the version agents hallucinate back into)
+#   formats in scope:    VST3, AU  (+ CLAP via clap-juce-extensions, out-of-tree)
+#
+# WHAT THIS FILE IS
+#   A retrieval eval, not a behavioural eval. Each entry asserts:
+#   "given this query, the retriever MUST surface this span."
+#   Whether the agent then writes correct C++ is a separate, Layer-E concern.
+#   Keeping these apart is what makes this file deterministic and CI-blockable.
+#
+# FIELD CONTRACT
+#   id                 stable, never reused, never renumbered
+#   query              phrased as an agent would actually phrase it, not as a doc heading
+#   failure_mode       what breaks when retrieval misses (see taxonomy below)
+#   expected_source    the span that would have prevented the failure
+#     url              null if unverified — DO NOT invent one
+#     link_verified    true only if the URL was resolved, not reconstructed
+#     doc_type         class-ref | breaking-changes | tutorial | forum | source | external
+#     granularity      page | section | symbol
+#   must_contain       substrings proving the right span came back; makes this
+#                      gradeable without an LLM judge
+#   wrong_answer       what the agent produces today when retrieval misses.
+#                      Optional but valuable: it is the regression you are guarding.
+#   confirmed          false until the maintainer reviews
+#
+# FAILURE MODE TAXONOMY
+#   version-drift      correct for an older JUCE, wrong for the target
+#   deprecated-api     still compiles, still documented, should not be used
+#   hallucinated-sig   method/type/signature that does not exist as written
+#   rt-safety          documented realtime constraint violated in audio thread
+#   absent-api         does not exist in JUCE at all; correct answer is "no"
+#   host-contract      format-level requirement (VST3/AU) JUCE surfaces indirectly
+#
+# NEGATIVE GOLDENS
+#   Entries with failure_mode `absent-api` are the most valuable and the most
+#   commonly omitted. They assert the retriever surfaces evidence of ABSENCE.
+#   A retriever that always returns its nearest semantic neighbour will fail
+#   these, and that failure is exactly the one producing invented APIs.
+#   Target ~20% of the final set.
+
+goldens:
+
+  - id: G-001
+    query: "set a custom font size on a Label in JUCE"
+    failure_mode: version-drift
+    expected_source:
+      url: https://github.com/juce-framework/JUCE/blob/master/BREAKING_CHANGES.md
+      link_verified: true
+      doc_type: breaking-changes
+      granularity: section
+      anchor: "Font metrics / FontOptions"
+    also_acceptable:
+      - url: https://juce.com/blog/juce-8-feature-overview-unicode/
+        link_verified: true
+        doc_type: external
+    must_contain:
+      - "FontOptions"
+      - "deprecated"
+    wrong_answer: "Emits `Font (16.0f)` — compiles with a deprecation warning and silently uses legacy, non-portable metrics."
+    notes: >
+      Highest-frequency JUCE 8 drift case. The old constructors still work, so
+      the agent gets no hard signal it is wrong; the failure surfaces as layout
+      differences across platforms. Retrieval has to volunteer this unprompted —
+      the query does not mention fonts changing.
+    confirmed: false
+
+  - id: G-002
+    query: "create an AudioProcessorValueTreeState and add parameters to it"
+    failure_mode: deprecated-api
+    expected_source:
+      url: https://docs.juce.com/master/classjuce_1_1AudioProcessorValueTreeState.html
+      link_verified: true
+      doc_type: class-ref
+      granularity: symbol
+      anchor: "AudioProcessorValueTreeState constructor (ParameterLayout overload)"
+    must_contain:
+      - "ParameterLayout"
+      - "discouraged"
+    wrong_answer: "Uses the older constructor plus `createAndAddParameter()`, which the docs mark as discouraged and slated for removal."
+    notes: >
+      The class page documents both paths on the same page, which is a chunking
+      hazard: a chunk containing only the deprecated narrative reads as
+      authoritative. Good stress test for whether chunk boundaries preserve the
+      deprecation marker alongside the code it applies to.
+    confirmed: false
+
+  - id: G-003
+    query: "read a parameter value from inside processBlock"
+    failure_mode: hallucinated-sig
+    expected_source:
+      url: null
+      link_verified: false
+      doc_type: class-ref
+      granularity: symbol
+      anchor: "AudioProcessorValueTreeState::getRawParameterValue"
+      find_via: "getRawParameterValue on the APVTS class-ref page (G-002 URL)"
+    must_contain:
+      - "getRawParameterValue"
+      - "std::atomic"
+    wrong_answer: "Treats the return as `float*` or as a bare `float`, dereferencing incorrectly."
+    notes: >
+      UNVERIFIED — I believe the return type is `std::atomic<float>*` as of
+      JUCE 6+, but I did not resolve the anchor this session. Confirm the exact
+      signature and fill the URL before this entry counts.
+    confirmed: false
+
+  - id: G-004
+    query: "save and restore plugin state in getStateInformation"
+    failure_mode: rt-safety
+    expected_source:
+      url: https://docs.juce.com/master/classjuce_1_1AudioProcessorValueTreeState.html
+      link_verified: true
+      doc_type: class-ref
+      granularity: symbol
+      anchor: "state accessor — locking note"
+    must_contain:
+      - "not realtime-safe"
+      - "audio processing code"
+    wrong_answer: "Touches the locked state accessor from the audio thread, producing intermittent priority-inversion dropouts that survive every functional test."
+    notes: >
+      The docs carry an explicit do-not-call-from-audio-thread warning. This is
+      the archetype for the whole rt-safety class: the constraint lives in a
+      prose warning attached to a method, not in the signature. If your chunker
+      splits warnings away from the symbol they qualify, you lose every entry of
+      this type at once. Worth building three or four more of these.
+    confirmed: false
+
+  - id: G-005
+    query: "attach a Slider to a plugin parameter"
+    failure_mode: hallucinated-sig
+    expected_source:
+      url: https://docs.juce.com/master/classjuce_1_1AudioProcessorValueTreeState_1_1SliderAttachment.html
+      link_verified: true
+      doc_type: class-ref
+      granularity: symbol
+    must_contain:
+      - "SliderAttachment"
+    wrong_answer: "Constructs the attachment with the wrong argument order, or lets it outlive the Slider it references."
+    notes: >
+      Tests nested-symbol resolution specifically. `SliderAttachment` is
+      meaningless without its enclosing scope, and a chunk that mentions it bare
+      is unresolvable. Whatever symbol index you build must key on the fully
+      qualified name.
+    confirmed: false
+
+  - id: G-006
+    query: "group parameters into sections for the host to display"
+    failure_mode: hallucinated-sig
+    expected_source:
+      url: https://docs.juce.com/master/classjuce_1_1AudioProcessorValueTreeState_1_1ParameterLayout.html
+      link_verified: true
+      doc_type: class-ref
+      granularity: symbol
+    must_contain:
+      - "ParameterLayout"
+      - "AudioProcessorParameterGroup"
+    confirmed: false
+
+  - id: G-007
+    query: "build this plugin as a CLAP with JUCE"
+    failure_mode: absent-api
+    expected_source:
+      url: https://github.com/free-audio/clap-juce-extensions
+      link_verified: true
+      doc_type: external
+      granularity: page
+    also_acceptable:
+      - url: https://cleveraudio.org/developers-getting-started/
+        link_verified: true
+        doc_type: external
+    must_contain:
+      - "clap-juce-extensions"
+    wrong_answer: "Adds CLAP to the FORMATS list in juce_add_plugin as though it were a first-class target. It is not."
+    notes: >
+      The canonical negative golden. There is no in-tree CLAP support to
+      retrieve, so a purely semantic retriever will return the nearest VST3/AU
+      material and the agent will confabulate from it. Correct behaviour is to
+      surface the out-of-tree extension and the absence itself. Note the
+      external-SDK boundary this implies for your corpus.
+    confirmed: false
+
+  - id: G-008
+    query: "keep parameter automation working when I add a new parameter in an update"
+    failure_mode: host-contract
+    expected_source:
+      url: null
+      link_verified: false
+      doc_type: class-ref
+      granularity: symbol
+      anchor: "ParameterID version hint"
+      find_via: "ParameterID / AudioProcessorParameterWithID class-ref"
+    must_contain:
+      - "ParameterID"
+      - "version hint"
+    wrong_answer: "Adds parameters without a version hint, silently breaking saved automation in existing VST3 sessions."
+    notes: >
+      UNVERIFIED URL. Worth including because the failure is invisible at build
+      time and only appears in a user's existing project — the exact class of
+      bug an agent will never catch itself.
+    confirmed: false
+
+  - id: G-009
+    query: "respond when a parameter changes"
+    failure_mode: rt-safety
+    expected_source:
+      url: https://docs.juce.com/master/structjuce_1_1AudioProcessorValueTreeState_1_1Listener.html
+      link_verified: true
+      doc_type: class-ref
+      granularity: symbol
+      anchor: "parameterChanged"
+    must_contain:
+      - "parameterChanged"
+      - "not guaranteed"
+    wrong_answer: "Re-reads the parameter inside the callback, assuming the fresh value is available. The docs say it may not be."
+    notes: >
+      A second rt-safety-family case with a different shape: the caveat is a
+      correctness trap rather than a threading one. Note it is a `struct`, so
+      the URL prefix differs — a small but real test of your URL canonicaliser.
+    confirmed: false
+
+  - id: G-010
+    query: "why does my JUCE 8 build fail on Visual Studio 2017"
+    failure_mode: version-drift
+    expected_source:
+      url: https://github.com/juce-framework/JUCE/blob/master/BREAKING_CHANGES.md
+      link_verified: true
+      doc_type: breaking-changes
+      granularity: section
+      anchor: "Projucer exporter removals"
+    must_contain:
+      - "Visual Studio 2017"
+      - "removed"
+    notes: >
+      Build-environment drift rather than API drift. Included to check that the
+      corpus covers toolchain constraints, not just symbols — agents fail here
+      too and the docs for it live somewhere completely different.
+    confirmed: false
+
+# ---------------------------------------------------------------------------
+# GAPS IN THIS PASS — deliberately left for the maintainer
+#
+#   1. Real failures. Every entry above is predicted, not observed. The entries
+#      worth the most are the ones drawn from transcripts where an agent
+#      actually got it wrong. Those should replace these as they accumulate.
+#   2. AU-specific coverage is absent. AU has its own contracts (component
+#      types, sandboxing, auval) and none are represented here.
+#   3. DSP-module coverage is absent — likely relevant given sibling synth and
+#      reverb projects.
+#   4. No forum-sourced goldens. The forum is where the answers to the hardest
+#      questions live and it is the hardest source to chunk and trust.
+#      Deciding whether it is in scope is a real fork in the design.
+#   5. Distribution is untuned: currently 3 hallucinated-sig, 2 rt-safety,
+#      2 version-drift, 1 each deprecated-api / absent-api / host-contract.
+#      Tune to observed failure frequency once you have transcript data.

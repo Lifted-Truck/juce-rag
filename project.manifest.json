@@ -1,0 +1,37 @@
+{
+  "name": "juce-rag",
+  "description": "Deterministic retrieval grounding layer over JUCE documentation, served to coding agents via MCP. Locates and evidences; never adjudicates.",
+  "created": "2026-07-24",
+  "repo": "github.com/Lifted-Truck/juce-rag",
+  "visibility": "public",
+  "status": {
+    "ratified": null,
+    "note": "Phase state lives in ROADMAP.md only. Provisional until the human ratifies this manifest."
+  },
+  "survey": {
+    "q1_what_is_it": "pipeline + service: an ingestion pipeline over the JUCE corpus feeding a deterministic retrieval index, exposed as an MCP server whose consumer is a coding agent (not a human)",
+    "q2_architecture_rung": {
+      "choice": "single-thread",
+      "ratified": "2026-07-24",
+      "rationale": "P0-P3 are strictly sequential, each phase gates the next; available parallelism (per-source extractors) does not justify coordination overhead at this size. Revisit only if a dense-retrieval comparison sweep materialises at P5.",
+      "revisit_at": "P5"
+    },
+    "q3_domain_core": "Retrieval scoring, ranking, gate evaluation, and chunk extraction are deterministic code. No LLM in the Layer-0 grading path, ever. Any LLM use (e.g. contextual annotation at ingest) is offline, seeded, and committed as data.",
+    "q4_oracle_shape": "Strict pinned goldens. Layer-0: deterministic retrieval metrics (recall@k, MRR, must_contain, negative goldens) against goldens/*.yaml, CI-blocking. Layer-E: behavioural (does an agent write correct JUCE), measured, non-blocking.",
+    "q5_second_implementation": false,
+    "q6_consumers": {
+      "is_provider": true,
+      "consumers": "Claude Code agent sessions building JUCE audio plugins (sibling projects in this workspace); any MCP-capable agent",
+      "is_consumer_of": "the author's cross-project doctrine and harness kit"
+    },
+    "q7_audit_thread": false,
+    "q8_knowledge_loop_tags": [
+      "corpus-quirks",
+      "chunking-retrieval",
+      "golden-governance",
+      "mcp-interface",
+      "licensing-provenance"
+    ],
+    "q9_lifespan_autonomy": "Long-lived. Interactive development (no unattended operation). Doubles as a public portfolio piece, which raises the bar on repo hygiene and README quality."
+  }
+}

@@ -1,0 +1,39 @@
+# CI mirrors the local Stop-hook gate: it runs the project's ONE oracle
+# (./verify fast) in the cloud — not new checks. Green in CI == green locally.
+# Public repo → unlimited Actions minutes, but the economical defaults stay:
+# PRs + pushes-to-main only, superseded runs cancelled. `verify full` never
+# runs in CI (Layer-E is measured locally; see ROADMAP).
+# NOTE: no paths-ignore here — unlike most repos, markdown IS load-bearing
+# (goldens governance, DECISIONS, the design contract), and the leak gate
+# must scan every change.
+
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: python -m pip install pyyaml
+
+      - name: verify fast
+        run: |
+          chmod +x verify
+          ./verify fast
