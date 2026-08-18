@@ -105,6 +105,24 @@ ratified data), `verify` + `scripts/check_*.py` (the gates),
 metrics against confirmed goldens; Layer-E behavioural harness at P6 (never
 CI-blocking).
 
+<!-- MAILBOX:START (kit 2.1.0 — INTEGRATIONS §3 Scope) -->
+## Mailbox
+
+- **Briefs TO juce-rag land in `integrations/<sender>/` in THIS repo** — the
+  only intake slot. Visitors write there and leave it uncommitted; committing
+  is a resident act. (No consumer has filed yet; the directory appears with
+  the first brief. Likely first senders: sibling JUCE-plugin projects wanting
+  the MCP server at P4.)
+- **Responses to OUR briefs live in the PROVIDER's tree**, not here — pull and
+  read them there. Checking only our own mailbox cannot distinguish an answered
+  brief from an ignored one.
+- **Exchanges between two other repos are not our business.** Read freely
+  (reads are never bounded), but never raise another repo's obligation to the
+  human or act on it. If one concerns us, file a brief — acting through the
+  protocol is always in bounds; if it concerns only the two parties, do
+  nothing and say nothing.
+<!-- MAILBOX:END -->
+
 <!-- KNOWLEDGE-LOOP:START -->
 ## Self-Improving Knowledge Loop
 
