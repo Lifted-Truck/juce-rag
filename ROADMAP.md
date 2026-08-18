@@ -11,8 +11,10 @@ State lives here; conversations are ephemeral. Design rationale:
 - **Oracle:** `./verify fast` = leak gate + structure + manifest sanity +
   goldens schema. `full` == fast (honest gap: no retrieval metrics until P3;
   no confirmed goldens yet, so nothing metric-gates). 
-- **Last human ratification:** 2026-07-24 (rung + public-repo/scrub decisions;
-  manifest and D-003..D-005 pending)
+- **Last human ratification:** 2026-08-18 — **manifest ratified** (survey
+  answers are now settled fact). Still pending: D-003 (built index never
+  committed), D-004 (JUCE 9.0.0 scope), D-005 (Python stack) — these, not the
+  manifest, are what block the submodule pin and P1.
 
 ## Invariants under active protection
 
@@ -27,7 +29,8 @@ The public-repo redistribution invariant (D-003) is live from the first push.
 - **Acceptance criteria:**
   1. `./verify fast` green (structure + manifest + goldens schema checks run,
      leak gate passes)
-  2. Manifest ratified by the human; D-003/D-004/D-005 accepted or rejected
+  2. Manifest ratified by the human (DONE 2026-08-18); D-003/D-004/D-005
+     accepted or rejected (OPEN — the remaining blocker)
   3. JUCE pinned as a submodule at the ratified version tag (D-004)
   4. Initial commit pushed to github.com/Lifted-Truck/juce-rag
 - **Out of scope:** any ingestion or retrieval code
@@ -106,6 +109,8 @@ The public-repo redistribution invariant (D-003) is live from the first push.
 
 ## Decision log
 
+- 2026-08-18 — project.manifest.json ratified by the human (trace:
+  traces/2026-08-18-manifest-ratified.md)
 - 2026-07-24 — Spin-up scaffolded; rung single-thread ratified; public repo +
   scrub ratified; D-003..D-009 recorded (see DECISIONS.md)
 
