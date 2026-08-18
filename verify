@@ -42,8 +42,15 @@ leak_gate() {
       [ -n "$line" ] && excludes+=(":(exclude)$line")
     done < .leakcheck-allow
   fi
-  hits=$(git grep --untracked -nIE '/(Users|home)/[^/]+/' -- . "${excludes[@]}" 2>/dev/null \
-         | grep -vE '/(Users|home)/[<$@{%]' || true)
+  # Two identity shapes: POSIX `/Users|home/<name>/` and the Windows drive
+  # form. The `\\+` quantifier (not a fixed `\\`) is load-bearing: it matches
+  # the raw single-backslash form AND the doubled-backslash escaped form a
+  # Windows agent writes into JSON. Written without a literal example on
+  # purpose — this gate greps itself, and a literal here matches itself
+  # (spectral-morph-001 found exactly that trap). Kept byte-identical to
+  # autonomous/verify and governor/leak_scan.py: three detectors, one policy.
+  hits=$(git grep --untracked -nIE '/(Users|home)/[^/]+/|[A-Za-z]:\\+Users\\+[^\\]' -- . "${excludes[@]}" 2>/dev/null \
+         | grep -vE '/(Users|home)/[<$@{%]|[A-Za-z]:\\+Users\\+[<$@{%]' || true)
   [ -z "$hits" ] && return 0
   echo "verify: LEAK — machine-absolute path in a tracked file (use ~/ instead):" >&2
   echo "$hits" | sed 's/^/    /' >&2
