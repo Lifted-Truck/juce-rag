@@ -6,3 +6,4 @@ entries into context. Tags: `corpus-quirks`, `chunking-retrieval`,
 
 - L0001 — JUCE releases outpace design assumptions; re-check at every phase start | golden-governance, corpus-quirks
 - L0002 — A probe running a repo's own oracle inherits its side effects; restore every file that oracle writes | licensing-provenance, golden-governance
+- L0003 — Documenting a gate's test fixtures verbatim makes the doc a leak; reword, don't allowlist | licensing-provenance

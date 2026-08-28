@@ -4,10 +4,10 @@
   "created": "2026-07-24",
   "repo": "github.com/Lifted-Truck/juce-rag",
   "visibility": "public",
-  "kit_version": "2.2.1",
+  "kit_version": "2.5.0",
   "status": {
-    "ratified": null,
-    "note": "Phase state lives in ROADMAP.md only. Provisional until the human ratifies this manifest."
+    "ratified": "2026-08-18",
+    "note": "see ROADMAP"
   },
   "survey": {
     "q1_what_is_it": "pipeline + service: an ingestion pipeline over the JUCE corpus feeding a deterministic retrieval index, exposed as an MCP server whose consumer is a coding agent (not a human)",
